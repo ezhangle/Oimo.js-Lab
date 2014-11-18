@@ -269,8 +269,8 @@ function initOimoPhysics(){
 
     world = new OIMO.World(1/60, 2, 8, true);
     world.gravity = new OIMO.Vec3(0, -1, 0);
-    //populate();
-    //setInterval(updateOimoPhysics, 1000/60);
+    populate();
+    setInterval(updateOimoPhysics, 1000/60);
 }
 
 function DistanceTest( p1, p2 ){
