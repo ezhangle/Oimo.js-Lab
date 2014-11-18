@@ -1,4 +1,4 @@
-This is a page to exprementos in physics engine. Original engine is found in (https://github.com/lo-th/Oimo.js)
+This is a page to experiments in physics engine. Original engine is found in (https://github.com/lo-th/Oimo.js)
 
 Experimental demos
 
