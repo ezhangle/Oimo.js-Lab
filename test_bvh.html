@@ -33,7 +33,10 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 <script src="js/bvh.js"></script>
 <script src="js/three.min.js"></script>
 <script src="js/navigation.js"></script>
-<script src="js/loaders/sea3d.min.js"></script>
+<script src="js/loaders/sea3d/SEA3D.js"></script>
+<script src="js/loaders/sea3d/SEA3DLZMA.js"></script>
+<script src="js/loaders/sea3d/SEA3DLoader.js"></script>
+<script src="js/loaders/sea3d/SEA3DPool.js"></script>
 <script src="js/slider.js"></script>
 <script src="js/loth/Transcode.js"></script>
 <script src="build/Oimo.min.js"></script>
@@ -196,6 +199,8 @@ function init3D() {
     initEvents();
     initOimoPhysics();
 	initBVH();
+	
+	heroVisibility();
 }
 
 function animate() {
@@ -264,8 +269,8 @@ function initOimoPhysics(){
 
     world = new OIMO.World(1/60, 2, 8, true);
     world.gravity = new OIMO.Vec3(0, -1, 0);
-    populate();
-    setInterval(updateOimoPhysics, 1000/60);
+    //populate();
+    //setInterval(updateOimoPhysics, 1000/60);
 }
 
 function DistanceTest( p1, p2 ){
@@ -495,13 +500,18 @@ var origine ={};
 
 function loadSea3dBody(){
     var size = 1;
-    var loader = new THREE.SEA3D( true );
+    var loader = new THREE.SEA3D( false );
+	loader.invertZ = false;
+	loader.flipZ = true;
     loader.onComplete = function( e ) {
         hero = loader.getMesh("onkba");
         hero.scale.set(size, size, -size);
         hero.material.transparent = true;
         hero.material.normalScale={x:-2,y:-2};
         hero.material.shininess = 10;
+		hero.position.set(0,0,0);
+		hero.rotation.set(0,0,0);
+		hero.scale.set(1,1,1);
         scene.add(hero);
         //console.log(hero.skeleton.bones.length);
 
@@ -514,6 +524,7 @@ function loadSea3dBody(){
         
         hero.visible = true;
         isViewModel = true;
+		
         doc.getElementById("b3").value = "hide model";
     }
     loader.load( bodyLink );
@@ -525,138 +536,120 @@ function heroVisibility() {
     else{ isViewModel = true; hero.visible=true; doc.getElementById("b3").value = "hide model";}
 }
 
-function updateSkinBones() {
-    //getValue();
-    var q = new THREE.Quaternion()
-    q.setFromEuler(new THREE.Euler( 0, -90, -90, 'XYZ' ))
+var RAD = Math.PI / 180;
+var DEG = 180 / Math.PI;
 
-    var vector = new THREE.Vector3(  );
-    var nodes = bvh.Nodes;
-    var parentNodes = bvh.ParentNodes;
-    var parent;
-    var i = bones.length;
-    var mtx = new THREE.Matrix4();
-    var mtx3 = new THREE.Matrix4();
-    var mtx_inv = new THREE.Matrix4();
-    var mtx_base = new THREE.Matrix4();
-    var bone, node, invBone, name;
-    var pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scale = new THREE.Vector3(1,1,1);
-    var pos2 = new THREE.Vector3(), quat2 = new THREE.Quaternion(), scale2 = new THREE.Vector3(1,1,1);
-    var quat3 = new THREE.Quaternion()
-    while(i--){
-        //mtx.identity();
-        //invmtx.identity();
-        mtx = new THREE.Matrix4();
-        mtx2 = new THREE.Matrix4();
-        mtx3 = new THREE.Matrix4();
-        mtx_inv = new THREE.Matrix4();
+var nameReplace = {};
+nameReplace["RightLowLeg"] = "LeftLowLeg";
+nameReplace["LeftLowLeg"] = "RightLowLeg";
+
+THREE.Skeleton.prototype.update = ( function () {
+
+	var offsetMatrix = new THREE.Matrix4();
+	
+	return function () {
+
+		// flatten bone matrices to array
+
+		for ( var b = 0, bl = this.bones.length; b < bl; b ++ ) {
+
+			// compute the offset between the current and the original transform
+
+			var matrix = this.bones[ b ] ? this.bones[ b ].mtx : this.identityMatrix;
+
+			offsetMatrix.multiplyMatrices( matrix, this.boneInverses[ b ] );
+			offsetMatrix.flattenToArrayOffset( this.boneMatrices, b * 16 );
+
+		}
+
+		if ( this.useVertexTexture ) {
+
+			this.boneTexture.needsUpdate = true;
+
+		}
+		
+	};
+
+} )();
+
+function updateSkinBones() {
+    var bone, node, name;
+	var nodes = bvh.Nodes;
+	var len = bones.length;
+	var notAsign = [];
+	//hero.updateMatrixWorld(true);
+	
+    for(var i = 0; i < len; i++)
+	//for(var i = len-1; i > -1; i--)
+	{	
         bone = bones[i];
         name = bone.name;
-        if(nodes[name]){
-            node = nodes[name];
+		
+		if (nameReplace[name])
+			name = nameReplace[name];
+		
+        if (node = nodes[name])
+		{
+			//
+			// LOCAL TO GLOBAL
+			//
+			
+			var nodeMtx = new THREE.Matrix4();
+			nodeMtx.copy( node.matrixWorld );
+			
+			var globalPos = new THREE.Vector3();
+			globalPos.setFromMatrixPosition( nodeMtx );	
+			
+			var globalEuler = new THREE.Euler();	
+			globalEuler.setFromRotationMatrix( nodeMtx );
+			
+			//
+			//	PREPARES MATRIX
+			//
+			
+			var globalMtx = new THREE.Matrix4();	
 
-            mtx.copy( node.matrixWorld );
-            mtx.copy( node.matrix);
-           // console.log(bone.parent)
-           // mtx_inv.copy(bone.matrixWorld);
-            //mtx_inv.getInverse( bone.matrixWorld );
-            //mtx_inv.copy(node.matrixWorld);//= node.matrixWorld.clone();//.getInverse(bone.matrixWorld)
-            //mtx = new THREE.Matrix4();
-           // mtx.getInverse( mtx_base );
-            //mtx.copy( node.matrix );
-
-            if( bone.parent ){
-               mtx2 = bone.matrix.clone()
-              // mtx_inv.getInverse( bone.matrixWorld.clone() );
-              // mtx2.multiply( mtx_inv )
-            }
-
-            //mtx.multiply( mtx2);
-
-
-            //if( node.parent ){
-            if( parentNodes[name] !== null ){
-                mtx3.getInverse( parentNodes[name].matrixWorld );
-                mtx3.multiply(node.matrixWorld);
-
-                //parent = nodes[parentNodes[name]];//nodes[node.parent.name];
-
-                //mtx_inv.copy( parent.matrixWorld );                  
-                //mtx.multiplyMatrices( mtx_inv, mtx );
-               // mtx_inv.getInverse( parent.matrixWorld );
-              //  mtx_inv.getInverse( parentNodes[name].matrix );
-                //vector = mtx_inv.multiplyVector3( parent.matrixWorld.getPosition() );
-               // mtx.getInverse( parent.matrixWorld );
-               // mtx.multiply( node.matrixWorld );
-               // mtx.getInverse( parent.matrix );
-               // mtx.multiply( node.matrix );
-             //   mtx.multiplyMatrices( mtx_inv, mtx );
-            } else {
-                //mtx.copy( nodes[name].matrixWorld );
-               // mtx.copy( node.matrixWorld );
-               // mtx.copy( node.matrix );
-                //vector = new THREE.Vector3.setFromMatrixPosition( node.matrixWorld )
-                //node.matrixWorld.getPosition() 
-                //mtx.multiplyMatrices(invmtx, mtx);
-                //bone.position.setFromMatrixPosition( mtx );
-                //
-            }
-
-            //mtx.makeRotationAxis(new THREE.Vector3(0,1,0), 90*ToRad);
-
-            //mtx.decompose(pos, quat, scale);
-            //quat.setFromRotationMatrix( mtx );
-            //quat.inverse();
-            //
-
-            pos.setFromMatrixPosition( mtx );
-           // quat.setFromRotationMatrix( mtx3 );
-
-            quat2.setFromRotationMatrix( mtx2 );
-
-            quat3.multiplyQuaternions(quat,quat2)
-
-            //quat2.x+= quat.x
-
-            //quat3.normalize();
-
-            //bone.position.copy(pos);
-            bone.quaternion.copy(quat3);
-           // quat.multiplyQuaternions(q, quat)//normalize()
-           //bone.position.setFromMatrixPosition( mtx );
-          
-           //bone.quaternion.setFromRotationMatrix( mtx );
-           //mtx2.getInverse( bone.matrix );
-           //mtx2.copy(origine[name]);
-           //mtx2.decompose( pos2, quat2, scale2 );
-
-           //mtx.decompose(pos, quat, scale);
-           
-
-           //var euler = new THREE.Euler().setFromRotationMatrix(mtx, bone.rotation.order)
-           //var euler = new THREE.Euler().setFromQuaternion(quat, bvh.order[name], true)
-           //bone.rotation.order = bvh.order[name];
-          //  var euler = new THREE.Euler().setFromQuaternion(quat)
-          // bone.rotation.order = bvh.order[name];
-
-           //quat.multiplyQuaternions(quat2)
-           //bone.position.copy(pos)
-           //bone.quaternion.copy(quat)
-           //bone.position.set(pos.y, pos.x, pos.z)
-           //bone.quaternion.set(quat.z, quat.y, quat.x, quat.w)
-
-          // bone.position.set(pos[V[0]]*M[0], pos[V[1]]*M[1], pos[V[2]]*M[2])
-           //bone.quaternion.set(quat[V[3]]*M[3], quat[V[4]]*M[4], quat[V[5]]*M[5], quat[V[6]]*M[6])
-           //bone.rotation.set(euler[V[3]]*M[3], euler[V[4]]*M[4], euler[V[5]]*M[5])
-
-           // bone.setRotationFromEuler(euler);
-
-            //bone.lookAt( vector );
-
-            //bone.updateMatrixWorld();
-
-
+			if (!bone.rootMatrix)
+			{
+				bone.rootMatrix = bone.matrixWorld.clone();		
+			}
+			
+			//
+			//	MODIFY TRANSFORM
+			//
+			
+			globalMtx.makeRotationFromEuler( globalEuler );
+			globalMtx.multiply( bone.rootMatrix );			
+			globalMtx.setPosition( globalPos );			
+					
+			//
+			//	GLOBAL TO LOCAL
+			//
+			
+			var inv = new THREE.Matrix4();
+			inv.getInverse( bone.parent.matrixWorld );
+			
+			var localMtx = new THREE.Matrix4();				
+			localMtx.multiplyMatrices( inv, globalMtx );
+			
+			globalMtx.multiplyMatrices( bone.parent.matrixWorld, localMtx );
+			
+			//	UPDATE BONE
+			
+			//bone.matrixAutoUpdate = false;
+			//bone.matrix.copy(localMtx);
+			//bone.matrixWorldNeedsUpdate = false;
+			//bone.updateMatrixWorld(true);
+			//bone.matrixWorld.copy(globalMtx);
+			bone.mtx = globalMtx.clone();
         }
+		else 
+		{
+			var globalMtx = new THREE.Matrix4();	
+			globalMtx.multiplyMatrices( bone.parent.mtx ? bone.parent.mtx : bone.parent.matrixWorld, bone.matrix );
+			
+			bone.mtx = globalMtx;
+		}
     }
 }
 

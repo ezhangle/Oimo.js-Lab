@@ -367,6 +367,7 @@ THREE.SEA3D = function(standard) {
 	this.container = undefined;
 	this.invertZ = standard != undefined ? !standard : true;	
 	this.invertCamera = standard != undefined ? standard : false;	
+	this.flipZ = false;
 	
 	this.objects = {};	
 }
@@ -477,6 +478,14 @@ THREE.SEA3D.prototype.vectorToVector3 = function(list) {
 	var i = 0, j = 0;
 	while(i < list.length)
 		n[j++] = new THREE.Vector3(list[i++], list[i++], list[i++]);
+	return n;
+}
+
+THREE.SEA3D.prototype.vectorToVector3Inv = function(list) {
+	var n = [];	
+	var i = 0, j = 0;
+	while(i < list.length)
+		n[j++] = new THREE.Vector3(list[i++], list[i++], -list[i++]);
 	return n;
 }
 
@@ -889,9 +898,9 @@ THREE.SEA3D.prototype.readGeometry = function(sea) {
 	var i, j, k, l,
 		geo = new THREE.Geometry(),
 		vertex, normal, uv;
-	
-	vertex = geo.vertices = this.vectorToVector3(sea.vertex);	
-	if (sea.normal) normal = this.vectorToVector3(sea.normal);		
+		
+	vertex = geo.vertices = this.flipZ ? this.vectorToVector3Inv(sea.vertex) : this.vectorToVector3(sea.vertex);	
+	if (sea.normal) normal = this.flipZ ? this.vectorToVector3Inv(sea.normal) : this.vectorToVector3(sea.normal);
 	if (sea.uv) 
 	{
 		uv = this.vectorToUV(sea.uv);
