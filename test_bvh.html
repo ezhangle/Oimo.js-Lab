@@ -539,10 +539,6 @@ function heroVisibility() {
 var RAD = Math.PI / 180;
 var DEG = 180 / Math.PI;
 
-var nameReplace = {};
-nameReplace["RightLowLeg"] = "LeftLowLeg";
-nameReplace["LeftLowLeg"] = "RightLowLeg";
-
 THREE.Skeleton.prototype.update = ( function () {
 
 	var offsetMatrix = new THREE.Matrix4();
@@ -584,9 +580,6 @@ function updateSkinBones() {
 	{	
         bone = bones[i];
         name = bone.name;
-		
-		if (nameReplace[name])
-			name = nameReplace[name];
 		
         if (node = nodes[name])
 		{

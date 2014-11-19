@@ -201,8 +201,8 @@ BVH.Reader.prototype = {
 		if(name==="rFoot") name = "RightFoot";
 		if(name==="lThigh") name = "LeftUpLeg";
 		if(name==="rThigh") name = "RightUpLeg";
-		if(name==="lShin") name = "RightLowLeg";
-		if(name==="rShin") name = "LeftLowLeg";
+		if(name==="lShin") name = "LeftLowLeg";
+		if(name==="rShin") name = "RightLowLeg";
 
 		// leg
 		if(name==="RightHip") name = "RightUpLeg";
