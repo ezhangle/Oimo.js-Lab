@@ -37,7 +37,6 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 <script src="js/bvh.js"></script>
 <script src="js/three.min.dev.js"></script>
 <script src="js/navigation.js"></script>
-<script src="js/shaders/SphericalShader.js"></script>
 <script src="js/loaders/sea3d/SEA3D.js"></script>
 <script src="js/loaders/sea3d/SEA3DLZMA.js"></script>
 <script src="js/loaders/sea3d/SEA3DLoader.new.js"></script>
@@ -80,10 +79,12 @@ var ToRad = Math.PI / 180;
 var ToDeg = 180 / Math.PI;
 var SeaStandard = false;
 var hero = null;
+
+var hero2 = null;
 var topp, s1, s2;
 var buffgeoBox;
 var shaders = [];
-var environment, envcontext, envLists, nEnv = 0, env22;
+var environment, envcontext, envLists, nEnv = 0;
 var geoSph;
 var geoBox;
 var bvh;
@@ -158,6 +159,7 @@ function debugTell(s) {
 }
 
 function init3D() {
+    environment = THREE.ImageUtils.loadTexture( 'images/spherical/env.jpg', THREE.SphericalReflectionMapping);
 
     initEnvironment();
 
@@ -220,7 +222,8 @@ function animate() {
 
 function initBVH() {
     bvh = new BVH.Reader();
-    loadBVH("bvh/story.png");
+    loadBVH("bvh/tpose.bvh");
+    //loadBVH("bvh/story.png");
 }
 
 function updateBVH() {
@@ -265,16 +268,12 @@ function initOimoPhysics(){
     buffgeoBox = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry( 1, 1, 1 ) );
     geoBox = new THREE.BoxGeometry( 1, 1, 1 )
 
-    matSphere = new THREE.MeshBasicMaterial( { envMap:environment, map: basicTexture(0), name:'sph' } );
-   // matBox = new THREE.MeshLambertMaterial( {  map:basicTexture(2), name:'box' } );
-   // matSphereSleep = new THREE.MeshLambertMaterial( { map: basicTexture(1), name:'ssph' } );
-   // matBoxSleep = new THREE.MeshLambertMaterial( {  map: basicTexture(3), name:'sbox' } );
+    
 
-    //matSphere = new THREE.SphericalShader({ env:environment, map:basicTexture(0), color:0xFFFFFF });
-    /*matBox = new THREE.SphericalShader( {  env:environment, map: basicTexture(2), name:'box' } );
-    matSphereSleep = new THREE.SphericalShader( { env:environment, map: basicTexture(1), name:'ssph' } );
-    matBoxSleep = new THREE.SphericalShader( { env:environment,  map: basicTexture(3), name:'sbox' } );
-*/
+    matSphere = new THREE.MeshBasicMaterial( { envMap:environment, map: basicTexture(0), name:'sph' } );
+    matBox = new THREE.MeshBasicMaterial( { envMap:environment, map:basicTexture(2), name:'box' } );
+    matSphereSleep = new THREE.MeshBasicMaterial( {envMap:environment, map: basicTexture(1), name:'ssph' } );
+    matBoxSleep = new THREE.MeshBasicMaterial( {envMap:environment,  map: basicTexture(3), name:'sbox' } );
 
     world = new OIMO.World(1/60, 2, 8, true);
     world.gravity = new OIMO.Vec3(0, -1, 0);
@@ -433,19 +432,19 @@ function updateOimoPhysics() {
             mesh.quaternion.copy(body.getQuaternion());
 
             // change material
-            //if(mesh.material.name === 'sbox') mesh.material = matBox;
-            //if(mesh.material.name === 'ssph') mesh.material = matSphere; 
+            if(mesh.material.name === 'sbox') mesh.material = matBox;
+            if(mesh.material.name === 'ssph') mesh.material = matSphere; 
 
             // reset position
             if(mesh.position.y<-100){
                 x = -100 + Math.random()*200;;
                 z = -100 + Math.random()*200;
-                y = 100 + Math.random()*1000;
+                y = 100 + Math.random()*500;
                 body.resetPosition(x,y,z);
             }
         } else {
-            //if(mesh.material.name === 'box') mesh.material = matBoxSleep;
-            //if(mesh.material.name === 'sph') mesh.material = matSphereSleep;
+            if(mesh.material.name === 'box') mesh.material = matBoxSleep;
+            if(mesh.material.name === 'sph') mesh.material = matSphereSleep;
         }
     }
 }
@@ -489,12 +488,10 @@ function populate() {
         } else if(t===2){
            
             bodys[i] = new OIMO.Body({type:'box', size:[w,h,d], pos:[x,y,z], move:true, world:world, config:config});
-            meshs[i] = new THREE.Mesh( geoBox, matSphere );
+            meshs[i] = new THREE.Mesh( geoBox, matBox );
             meshs[i].scale.set( w, h, d );
         }
 
-        //meshs[i].castShadow = true;
-        //meshs[i].receiveShadow = true;
         scene.add( meshs[i] );
     }
 }
@@ -523,25 +520,38 @@ function loadSea3dBody(url){
         if(url == 'models/onkba3.sea')bodyName="onkba";
         if(url == 'models/dianna.sea')bodyName="dianna_b";
 
-        hero = loader.getMesh(bodyName);
+        hero = loader.getMesh(bodyName).clone();
 
-       // hero.material.transparent = true;
-       // hero.material.normalScale={x:-2,y:-2};
-       // hero.material.shininess = 10;
-       // hero.material = new THREE.MeshBasicMaterial( { color: 0xFF7777, skinning: true } );
-        var tx  = hero.material.map || null;//THREE.ImageUtils.loadTexture( 'images/onkba/onkba.png');
-        //tx.flipY = false;
-        var tx2  = hero.material.normalMap || null;//THREE.ImageUtils.loadTexture( 'images/onkba/onkba_n.jpg');
-        //tx2.flipY = false;
-        shaders[0] = new THREE.SphericalShader({ env:environment, map:tx, normal:tx2,  color:0xFFFFFF, skinning:true, transparent:true });
-        hero.material = shaders[0];
+        hero.material.skinning = true;
+        hero.material.envMap = environment;
+        hero.material.transparent = true;
+        hero.material.normalScale={x:-2,y:-2};
+        hero.material.color = new THREE.Color( 0xFFFFFF );
+        hero.material.ambient = new THREE.Color( 0xFFFFFF );
+        hero.material.specular = new THREE.Color( 0xFFFFFF );
+        hero.material.emissive = new THREE.Color( 0xFFFFFF );
+        hero.material.shininess = 10;
+
 		hero.position.set(0,0,0);
 		hero.rotation.set(0,0,0);
 		hero.scale.set(size,size,size);
+
         scene.add(hero);
+        //scene.add(g);
+        //g.scale.set(size,size,size);
+
+        
+       /* hero2 = loader.getMesh(bodyName).clone();
+        hero2.material = shaders[0];
+        hero2.position.set(100,0,0);
+        hero2.rotation.set(0,0,0);
+        hero2.scale.set(size,size,-size);
+        scene.add(hero2);*/
+        
 
         bones = hero.skeleton.bones;
         boneInverses = hero.skeleton.boneInverses;
+
         
         var i = hero.skeleton.bones.length;
         //
@@ -554,7 +564,7 @@ function loadSea3dBody(url){
 		
         doc.getElementById("b3").value = "hide model";
     }
-    loader.parser = THREE.SEA3D.DEFAULT;
+    loader.parser = THREE.SEA3D.AUTO;
     loader.load( url );
 }
 
@@ -582,8 +592,10 @@ THREE.Skeleton.prototype.update = ( function () {
 		for ( var b = 0, bl = this.bones.length; b < bl; b ++ ) {
 
 			// compute the offset between the current and the original transform
+            if(!this.bones[ b ].mtx ) this.bones[ b ].mtx = this.bones[ b ].matrixWorld; 
 
 			var matrix = this.bones[ b ] ? this.bones[ b ].mtx : this.identityMatrix;
+            //var matrix = this.bones[ b ] ? this.bones[ b ].matrixWorld : this.identityMatrix;
 
 			offsetMatrix.multiplyMatrices( matrix, this.boneInverses[ b ] );
 			offsetMatrix.flattenToArrayOffset( this.boneMatrices, b * 16 );
@@ -621,12 +633,12 @@ function updateSkinBones() {
         if ( node = nodes[name]){
            
 
-            /*var originePos = new THREE.Vector3();
+            var originePos = new THREE.Vector3();
             var origineQuat = new THREE.Quaternion()
             var origineScale =  new THREE.Vector3();
             if(origine[name]){
                 origine[name].decompose( originePos, origineQuat, origineScale );
-            }*/
+            }
 
 
 			//
@@ -655,6 +667,8 @@ function updateSkinBones() {
                 //pos_target.setFromMatrixPosition( bvh.ParentNodes[name].matrixWorld );
             //}
 			globalPos.setFromMatrixPosition( nodeMtx );
+             
+            //globalPos.add(originePos)
             globalQuat.setFromRotationMatrix( nodeMtx );
             //var globalEuler = new THREE.Euler().setFromRotationMatrix( nodeMtx );
            // var globalPos = new THREE.Vector3().setFromMatrixPosition( mtx );
@@ -701,7 +715,11 @@ function updateSkinBones() {
 			//bone.matrix.copy(localMtx);
 			//bone.matrixWorldNeedsUpdate = false;
 			//bone.updateMatrixWorld(true);
-			//bone.matrixWorld.copy(globalMtx);
+			//bone.matrixWorld.copy(globalMtx.clone());
+            //bone.updateMatrixWorld(true);
+            //bone.position.copy(new THREE.Vector3().setFromMatrixPosition( globalMtx.clone() ));
+            //bone.quaternion.copy(new THREE.Quaternion().setFromRotationMatrix( globalMtx.clone() ));
+            //bone.matrixWorldNeedsUpdate = true;
 			bone.mtx = globalMtx.clone();
         }
 		else
@@ -710,6 +728,9 @@ function updateSkinBones() {
 			globalMtx.multiplyMatrices( bone.parent.mtx ? bone.parent.mtx : bone.parent.matrixWorld, bone.matrix );
 			
 			bone.mtx = globalMtx;
+            //bone.position.copy(new THREE.Vector3().setFromMatrixPosition( globalMtx ));
+            //bone.quaternion.copy(new THREE.Quaternion().setFromRotationMatrix( globalMtx ));
+            //bone.matrixWorldNeedsUpdate = true;
 		}
     }
 }
@@ -780,7 +801,7 @@ function initEnvironment(){
     loadNewEnv(true);
     env.onclick = loadNewEnv;
 
-}
+} 
 
 function loadNewEnv(){
    // var url = 'images/spherical/'+envLists[nEnv];
@@ -791,7 +812,7 @@ function loadNewEnv(){
         nEnv++;
         if(nEnv==envLists.length) nEnv = 0;
         envcontext.drawImage(img, 0, 0, 64,64);
-        environment = new THREE.Texture(img);//, new THREE.SphericalReflectionMapping());
+        environment.image = img;
         environment.needsUpdate = true;
 
         
@@ -803,7 +824,6 @@ function loadNewEnv(){
     img.src = 'images/spherical/'+envLists[nEnv];
 
 }
-
 
 </script>
 </body>

@@ -556,8 +556,8 @@ THREE.SEA3D.prototype.applyMatrix = function(obj3d, mtx, invZ) {
 }
 
 THREE.SEA3D.prototype.updateMatrix = function(obj3d, sea) {
-	var mtx = new THREE.Matrix4();
-	mtx.elements = sea.transform;
+	var mtx = new THREE.Matrix4().fromArray(sea.transform);
+	//mtx.elements = sea.transform;
 	
 	if (!sea.isStatic) {
 		this.applyMatrix(obj3d, mtx, this.invertZ && !sea.parent);		
@@ -1547,19 +1547,21 @@ THREE.SEA3D.prototype.readSkeleton = function(sea) {
 		quat = new THREE.Quaternion();
 	
 	rootMatrix = new THREE.Matrix4();
-	rootMatrix.elements = sea.joint[0].inverseBindMatrix;		
+	rootMatrix.fromArray(sea.joint[0].inverseBindMatrix);
+	//rootMatrix.elements = sea.joint[0].inverseBindMatrix;		
 	
 	for (var i = 0; i < sea.joint.length; i++)
 	{
-		var bone = sea.joint[i]			
-		
-		mtx_inv.elements = bone.inverseBindMatrix;		
+		var bone = sea.joint[i];		
+		mtx_inv.fromArray(bone.inverseBindMatrix);
+		//mtx_inv.elements = bone.inverseBindMatrix;		
 		mtx = new THREE.Matrix4();
 		mtx.getInverse( mtx_inv );
 		
 		if (bone.parentIndex > -1)
 		{
-			mtx_inv.elements = sea.joint[bone.parentIndex].inverseBindMatrix;						
+			//mtx_inv.elements = sea.joint[bone.parentIndex].inverseBindMatrix;
+			mtx_inv.fromArray(sea.joint[bone.parentIndex].inverseBindMatrix);					
 			mtx.multiplyMatrices( mtx_inv, mtx );	
 		}
 		
