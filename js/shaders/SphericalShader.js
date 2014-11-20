@@ -79,7 +79,7 @@ THREE.Spherical = {
         useNoise: {type: 'f', value: 0},
         noise: {type: 'f', value: 0.4},
 
-        normalScale: {type: 'f', value: 0.8},
+        normalScale: {type: 'f', value: -2},
         normalRepeat: {type: 'f', value: 1},
 
         useScreen: {type: 'f', value: 0},

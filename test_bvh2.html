@@ -21,6 +21,9 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 #b1 { position:absolute; top:10px; left:5px; width:72.5px; height:30px; }
 #b2 { position:absolute; top:10px; left:82.5px; width:72.5px; height:30px; }
 #b3 { position:absolute; top:10px; right:5px; width:148px; height:30px; }
+#b4 { position:absolute; top:50px; right:5px; width:148px; height:30px; }
+#b5 { position:absolute; top:90px; right:5px; width:148px; height:30px; }
+#b6 { position:absolute; top:130px; right:5px; width:148px; height:30px; }
 
 #dragZone { position:absolute; bottom:60px; left:5px; width:144px; height:45px; background-color:none;  border: 3px dashed #ccc; pointer-events:auto; }
 #dragZone.hover { border: 3px dashed #333; }
@@ -32,12 +35,12 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 </head>
 <body>
 <script src="js/bvh.js"></script>
-<script src="js/three.min.js"></script>
+<script src="js/three.min.dev.js"></script>
 <script src="js/navigation.js"></script>
 <script src="js/shaders/SphericalShader.js"></script>
 <script src="js/loaders/sea3d/SEA3D.js"></script>
 <script src="js/loaders/sea3d/SEA3DLZMA.js"></script>
-<script src="js/loaders/sea3d/SEA3DLoader.js"></script>
+<script src="js/loaders/sea3d/SEA3DLoader.new.js"></script>
 <script src="js/slider.js"></script>
 <script src="js/loth/Transcode.js"></script>
 <script src="build/Oimo.min.js"></script>
@@ -50,6 +53,9 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 <input type="submit" value="action" id="b1">
 <input type="submit" value="story" id="b2">
 <input type="submit" value="show model" id="b3">
+<input type="submit" value="Stick model" id="b4">
+<input type="submit" value="Onkba model" id="b5">
+<input type="submit" value="Dianna model" id="b6">
 
 <div id="BVHhubs"></div>
 <div id="out1"></div>
@@ -128,6 +134,10 @@ function initInterface() {
     doc.getElementById("b1").addEventListener( 'click', function ( e ) { loadBVH("bvh/action.png"); }, false );
     doc.getElementById("b2").addEventListener( 'click', function ( e ) { loadBVH("bvh/story.png"); }, false );    
     doc.getElementById("b3").addEventListener( 'click', function ( e ) {heroVisibility(); }, false );
+
+    doc.getElementById("b4").addEventListener( 'click', function ( e ) { loadSea3dBody("models/stickman.sea"); }, false );
+    doc.getElementById("b5").addEventListener( 'click', function ( e ) { loadSea3dBody("models/onkba3.sea"); }, false );
+    doc.getElementById("b6").addEventListener( 'click', function ( e ) { loadSea3dBody("models/dianna.sea"); }, false );
 
     s1 = new UI.Slide(topp, "speed", setSpeed, 50, [5,70, 150, 20]);
     s2 = new UI.Slide(topp, "bones", setBones, 25, [5,110, 150, 20]);
@@ -329,8 +339,8 @@ function createOimoSqueleton() {
                 meshsquel[name] = new THREE.Mesh( buffgeoBox, boneMaterial );
                 meshsquel[name].scale.set( w, h, distance  );
             }
-            meshsquel[name].castShadow = true;
-            meshsquel[name].receiveShadow = true;
+            //meshsquel[name].castShadow = true;
+            //meshsquel[name].receiveShadow = true;
             scene.add( meshsquel[name] );
         }
     }
@@ -463,7 +473,7 @@ function populate() {
     var i = 200;
 
     while (i--){
-        t = 2//Math.floor(Math.random()*2)+1;
+        t = Math.floor(Math.random()*2)+1;
         x = -100 + Math.random()*200;;
         z = -100 + Math.random()*200;
         y = 100 + Math.random()*500;
@@ -490,23 +500,31 @@ function populate() {
 }
 
 
-
 //----------------------------------
 // TODO SEA3D TEST 
 //----------------------------------
 
 var origine ={};
 
-function loadSea3dBody(){
+function removeHero(){
+    isViewModel = false;
+    scene.remove(hero);
+}
+
+function loadSea3dBody(url){
+    if(isViewModel)removeHero();
+    var bodyName;
     var size = 1;
     var loader = new THREE.SEA3D( false );
-	loader.invertZ = false;
-	loader.flipZ = true;
+	loader.invertZ = true;
+    loader.flipZ = true;
     loader.onComplete = function( e ) {
-        //hero = loader.getMesh("onkba");
-        hero = loader.getMesh("body");
-        //hero = loader.getMesh("dianna_body");
-        //hero.scale.set(size, size, -size);
+        if(url == 'models/stickman.sea')bodyName="body";
+        if(url == 'models/onkba3.sea')bodyName="onkba";
+        if(url == 'models/dianna.sea')bodyName="dianna_b";
+
+        hero = loader.getMesh(bodyName);
+
        // hero.material.transparent = true;
        // hero.material.normalScale={x:-2,y:-2};
        // hero.material.shininess = 10;
@@ -521,7 +539,6 @@ function loadSea3dBody(){
 		hero.rotation.set(0,0,0);
 		hero.scale.set(size,size,size);
         scene.add(hero);
-        //console.log(hero.skeleton.bones.length);
 
         bones = hero.skeleton.bones;
         boneInverses = hero.skeleton.boneInverses;
@@ -530,7 +547,6 @@ function loadSea3dBody(){
         //
         while(i--){
             origine[hero.skeleton.bones[i].name]=hero.skeleton.bones[i].matrix;
-            console.log(hero.skeleton.bones[i].name)
         }
         
         hero.visible = true;
@@ -539,11 +555,11 @@ function loadSea3dBody(){
         doc.getElementById("b3").value = "hide model";
     }
     loader.parser = THREE.SEA3D.DEFAULT;
-    loader.load( bodyLink );
+    loader.load( url );
 }
 
 function heroVisibility() {
-    if(hero == null){ loadSea3dBody(); return;}
+    if(hero == null){ loadSea3dBody(bodyLink); return;}
     if(isViewModel){isViewModel = false; hero.visible=false; doc.getElementById("b3").value = "show model";}
     else{ isViewModel = true; hero.visible=true; doc.getElementById("b3").value = "hide model";}
 }
@@ -589,7 +605,10 @@ function updateSkinBones() {
 	var nodes = bvh.Nodes;
 	var len = bones.length;
 	var notAsign = [];
-	//hero.updateMatrixWorld(true);
+
+    var globalPos = new THREE.Vector3();
+    var globalQuat = new THREE.Quaternion();
+    var globalMtx = new THREE.Matrix4();
 	
     for(var i = 0; i < len; i++)
 	//for(var i = len-1; i > -1; i--)
@@ -598,8 +617,9 @@ function updateSkinBones() {
         name = bone.name;
 		
 		//if (nameReplace[name]) name = nameReplace[name];
-		
-        if (node = nodes[name]){
+		//if(name=='root')return;
+        if ( node = nodes[name]){
+           
 
             /*var originePos = new THREE.Vector3();
             var origineQuat = new THREE.Quaternion()
@@ -620,19 +640,23 @@ function updateSkinBones() {
 			var mtx = new THREE.Matrix4();
             // apply position on matrix
             mtx.makeTranslation(pos_base.x, pos_base.y, pos_base.z);
-
+*/ 
+            var pos_target = new THREE.Vector3()
 			
-            if(bvh.ChildNodes[name]){
+            //if(bvh.ChildNodes[name]){
                  //var ttnodeMtx = new THREE.Matrix4().copy( bvh.ChildNodes[name].matrixWorld );
                 
-                var pos_target = new THREE.Vector3().setFromMatrixPosition( bvh.ChildNodes[name].matrixWorld );
-                var mtx3 = new THREE.Matrix4();
-                mtx3.lookAt( pos_target, pos_base, new THREE.Vector3(0, 0, 1) );
-                mtx.multiply( mtx3 );
-            }*/
-			var globalPos = new THREE.Vector3().setFromMatrixPosition( nodeMtx );
-            var globalQuat = new THREE.Quaternion().setFromRotationMatrix( nodeMtx );
-            var globalEuler = new THREE.Euler().setFromRotationMatrix( nodeMtx );
+               //pos_target.setFromMatrixPosition( bvh.ChildNodes[name].matrixWorld );
+                //var mtx3 = new THREE.Matrix4();
+                ///mtx3.lookAt( pos_target, pos_base, new THREE.Vector3(0, 0, 1) );
+                //mtx.multiply( mtx3 );
+            //}
+            //if( bvh.ParentNodes[name]){
+                //pos_target.setFromMatrixPosition( bvh.ParentNodes[name].matrixWorld );
+            //}
+			globalPos.setFromMatrixPosition( nodeMtx );
+            globalQuat.setFromRotationMatrix( nodeMtx );
+            //var globalEuler = new THREE.Euler().setFromRotationMatrix( nodeMtx );
            // var globalPos = new THREE.Vector3().setFromMatrixPosition( mtx );
            // var globalQuat = new THREE.Quaternion().setFromRotationMatrix( mtx );
             // rescale model
@@ -653,8 +677,8 @@ function updateSkinBones() {
 			//	MODIFY TRANSFORM
 			//
 			
-			globalMtx.makeRotationFromEuler( globalEuler );
-            //globalMtx.makeRotationFromQuaternion( globalQuat );
+			//globalMtx.makeRotationFromEuler( globalEuler );
+            globalMtx.makeRotationFromQuaternion( globalQuat );
             //globalMtx.makeRotationFromQuaternion( globalQuat );
 			globalMtx.multiply( bone.rootMatrix );
             //globalMtx.makeTranslation(0, globalPos.y, globalPos.z);
@@ -680,7 +704,7 @@ function updateSkinBones() {
 			//bone.matrixWorld.copy(globalMtx);
 			bone.mtx = globalMtx.clone();
         }
-		else 
+		else
 		{
 			var globalMtx = new THREE.Matrix4();	
 			globalMtx.multiplyMatrices( bone.parent.mtx ? bone.parent.mtx : bone.parent.matrixWorld, bone.matrix );
