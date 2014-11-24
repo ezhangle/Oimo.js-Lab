@@ -742,42 +742,44 @@ function updateSkinBones() {
 		{	
 			bone = bones[i];
 			name = bone.name;
-			
-			var parentMtx = bone.parent.mtx ? bone.parent.mtx : bone.parent.matrixWorld;
-			
-			if (node = nodes[name])
-			{
-				//
-				//	GLOBAL TO LOCAL
-				//								
-				
-				var inv = new THREE.Matrix4();
-				inv.getInverse( parentMtx );
-				
-				var localMtx = new THREE.Matrix4();				
-				localMtx.multiplyMatrices( inv, bone.mtx );				
-								
-				//--
-				
-				var bonePos = new THREE.Vector3();
-				bonePos.setFromMatrixPosition( bone.matrix );
-				
-				localMtx.setPosition( bonePos );						
-				
-				//--
-				
-				var globalMtx = new THREE.Matrix4();
-				globalMtx.multiplyMatrices( parentMtx, localMtx );
-			
-				bone.mtx = globalMtx;				
-			}
-			else			
-			{
-				var globalMtx = new THREE.Matrix4();	
-				globalMtx.multiplyMatrices( parentMtx, bone.matrix );
-			
-				bone.mtx = globalMtx;
-			}
+           // return;
+			if(name!=='Hips'){
+    			var parentMtx = bone.parent.mtx ? bone.parent.mtx : bone.parent.matrixWorld;
+    			
+    			if (node = nodes[name] )
+    			{
+    				//
+    				//	GLOBAL TO LOCAL
+    				//								
+    				
+    				var inv = new THREE.Matrix4();
+    				inv.getInverse( parentMtx );
+    				
+    				var localMtx = new THREE.Matrix4();				
+    				localMtx.multiplyMatrices( inv, bone.mtx );				
+    								
+    				//--
+    				
+    				var bonePos = new THREE.Vector3();
+    				bonePos.setFromMatrixPosition( bone.matrix );
+    				
+    				localMtx.setPosition( bonePos );						
+    				
+    				//--
+    				
+    				var globalMtx = new THREE.Matrix4();
+    				globalMtx.multiplyMatrices( parentMtx, localMtx );
+    			
+    				bone.mtx = globalMtx;				
+    			}
+    			else			
+    			{
+    				var globalMtx = new THREE.Matrix4();	
+    				globalMtx.multiplyMatrices( parentMtx, bone.matrix );
+    			
+    				bone.mtx = globalMtx;
+    			}
+            }
 		}
 	}
 }
