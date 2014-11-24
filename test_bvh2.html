@@ -15,11 +15,13 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 #out2 { position:absolute; bottom:30px; right:6px; text-align: right; font-size:10px; pointer-events:none;}
 #out1 { position:absolute; bottom:30px; left:6px; text-align: left; font-size:10px; pointer-events:none;}
 #debug { position:absolute; top:6px; left:170px; text-align:left; pointer-events:none;}
-#topp { position:absolute; top:0px; left:0px; }
+#oimoMenu { position:absolute; top:0px; left:0px; }
+#bvhMenu { position:absolute; top:100px; left:0px; }
 #l1 { position:absolute; top:0px; left:0; width:160px; height:100%; background-color:rgba(30,30,40,0.4); pointer-events:none; border-right:1px solid #303040; }
 #l2 { position:absolute; top:0px; right:0; width:160px; height:100%; background-color:rgba(30,30,40,0.4); pointer-events:none; border-left:1px solid #303040;}
-#b1 { position:absolute; top:10px; left:5px; width:72.5px; height:30px; }
-#b2 { position:absolute; top:10px; left:82.5px; width:72.5px; height:30px; }
+#b0 { position:absolute; top:10px; left:5px; width:145px; height:30px; }
+#b1 { position:absolute; top:10px; left:5px; width:72px; height:30px; }
+#b2 { position:absolute; top:10px; left:82px; width:72px; height:30px; }
 #b3 { position:absolute; top:10px; right:5px; width:148px; height:30px; }
 #b4 { position:absolute; top:50px; right:5px; width:148px; height:30px; }
 #b5 { position:absolute; top:90px; right:5px; width:148px; height:30px; }
@@ -49,8 +51,16 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 <div id="l2"></div>
 <div id="debug"></div>
 <input type="file" id="files" />
-<input type="submit" value="action" id="b1">
-<input type="submit" value="story" id="b2">
+
+<div id="oimoMenu">
+    <input type="submit" value="Physics on" id="b0">
+</div>
+
+<div id="bvhMenu">
+	<input type="submit" value="action" id="b1">
+	<input type="submit" value="story" id="b2">
+</div>
+
 <input type="submit" value="show model" id="b3">
 <input type="submit" value="Stick model" id="b4">
 <input type="submit" value="Onkba model" id="b5">
@@ -59,17 +69,17 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 <div id="BVHhubs"></div>
 <div id="out1"></div>
 <div id="out2"></div>
-<div id="topp"></div>
 
 <div id="dragZone"><br>Drag File</div>
 <div id="topfiles"><br>Load File</div>
 <div id="envSelector"></div>
 
 <script type="text/javascript">
+
+var doc = document;
+
 window.onload = initInterface;
 
-//var bodyLink = "models/onkba3.sea";
-//var bodyLink = "models/dianna.sea";
 var bodyLink = "models/stickman.sea";
 
 var out1, out2, debug, fileButton, fileSel, holder;
@@ -79,9 +89,8 @@ var ToRad = Math.PI / 180;
 var ToDeg = 180 / Math.PI;
 var SeaStandard = false;
 var hero = null;
-
 var hero2 = null;
-var topp, s1, s2;
+var oimoMenu, bvhMenu, s1, s2;
 var buffgeoBox;
 var shaders = [];
 var environment, envcontext, envLists, nEnv = 0;
@@ -96,16 +105,21 @@ var boneInverses = null;
 var isViewModel = false;
 var currentNames = null;
 var currentDistance = null;
+
 //oimo var
+var isWithPhysics = false;
+var oimoStep = null;
 var world = null;
 var collisionGroupes = {};
 var bodysquel = null;
 var meshsquel = null;
 var meshs = null;
 var bodys = null;
-
-var doc = document;
 var isWithSqueleton = false;
+var isWithObjects = false;
+
+
+
 
 function initInterface() {
 	
@@ -116,7 +130,9 @@ function initInterface() {
     fileSel = doc.getElementById('topfiles');
 	holder = doc.getElementById('dragZone');
 	container = doc.getElementById("viewport");
-	topp = doc.getElementById("topp");
+	bvhMenu = doc.getElementById("bvhMenu");
+	oimoMenu = doc.getElementById("oimoMenu");
+
 	holder.ondragover = function () { this.className = 'hover'; return false; };
 	holder.ondragend = function () { this.className = ''; return false; };
 	holder.ondrop = function (e) {
@@ -132,19 +148,27 @@ function initInterface() {
     fileButton.addEventListener('change', handleFileSelect, false);
     fileButton.onmouseover = function () { fileSel.className = 'hover'; return false; };
     fileButton.onmouseout = function () { fileSel.className = ''; return false; };
-    doc.getElementById("b1").addEventListener( 'click', function ( e ) { loadBVH("bvh/action.png"); }, false );
-    doc.getElementById("b2").addEventListener( 'click', function ( e ) { loadBVH("bvh/story.png"); }, false );    
-    doc.getElementById("b3").addEventListener( 'click', function ( e ) {heroVisibility(); }, false );
 
+    doc.getElementById("b0").addEventListener( 'click', function ( e ) { physicsOnOff(); }, false );
+
+    doc.getElementById("b1").addEventListener( 'click', function ( e ) { loadBVH("bvh/action.png"); }, false );
+    doc.getElementById("b2").addEventListener( 'click', function ( e ) { loadBVH("bvh/story.png"); }, false );   
+
+    doc.getElementById("b3").addEventListener( 'click', function ( e ) {heroVisibility(); }, false );
     doc.getElementById("b4").addEventListener( 'click', function ( e ) { loadSea3dBody("models/stickman.sea"); }, false );
     doc.getElementById("b5").addEventListener( 'click', function ( e ) { loadSea3dBody("models/onkba3.sea"); }, false );
     doc.getElementById("b6").addEventListener( 'click', function ( e ) { loadSea3dBody("models/dianna.sea"); }, false );
 
-    s1 = new UI.Slide(topp, "speed", setSpeed, 50, [5,70, 150, 20]);
-    s2 = new UI.Slide(topp, "bones", setBones, 25, [5,110, 150, 20]);
+    s1 = new UI.Slide(bvhMenu, "speed", setSpeed, 50, [5,70, 150, 20]);
+    s2 = new UI.Slide(bvhMenu, "bones", setBones, 25, [5,110, 150, 20]);
 	
 	init3D();
     animate();
+}
+
+function physicsOnOff(evt) {
+	if(isWithPhysics){ removePhysics(); doc.getElementById("b0").value = "Physics on";}
+	else { initOimoPhysics(); doc.getElementById("b0").value = "Physics off";}
 }
 
 function handleFileSelect(evt) {
@@ -202,7 +226,7 @@ function init3D() {
     container.appendChild( renderer.domElement );
 
     initEvents();
-    initOimoPhysics();
+    //initOimoPhysics();
 	initBVH();
 	
 	heroVisibility();
@@ -211,8 +235,9 @@ function init3D() {
 function animate() {
     requestAnimationFrame( animate );
     updateBVH();
+    
 
-    renderer.clear();
+    //renderer.clear();
     renderer.render( scene, camera );
 }
 
@@ -247,7 +272,7 @@ function loadBVH(file) {
     bvh.boneSize = BVHanimConfig.boneSize;
     bvh.speed = BVHanimConfig.speed;
     bvh.load(file);
-    bvh.endFunction = createOimoSqueleton;
+    if(isWithPhysics) bvh.endFunction = createOimoSqueleton;
 }
 
 //----------------------------------
@@ -255,6 +280,7 @@ function loadBVH(file) {
 //----------------------------------
 
 function initOimoPhysics(){
+	isWithPhysics = true;
     // The Bit of a collision group
     collisionGroupes = {
         group1 : 1 << 0,  // 00000000 00000000 00000000 00000001
@@ -277,21 +303,33 @@ function initOimoPhysics(){
 
     world = new OIMO.World(1/60, 2, 8, true);
     world.gravity = new OIMO.Vec3(0, -1, 0);
+
+    createOimoSqueleton();
     populate();
-    setInterval(updateOimoPhysics, 1000/60);
+
+    oimoStep = setInterval(updateOimoPhysics, 1000/60);
 }
 
-function DistanceTest( p1, p2 ){
+function removePhysics(){
+	isWithPhysics = false;
+	if(isWithSqueleton)deleteOimoSkeleton();
+	if(isWithObjects)deleteOimoObject();
+	clearInterval(oimoStep);
+	world.clear();
+	
+}
+
+/*function DistanceTest( p1, p2 ){
     var x = p2.x-p1.x;
     var y = p2.y-p1.y;
     var z = p2.z-p1.z;
     var d = Math.sqrt(x*x + y*y + z*z);
     if(d<=0)d=0.1;
     return d;
-}
+}*/
 
 function createOimoSqueleton() {
-    if(currentNames!==null)deleteOldSkeleton();
+    if(currentNames!==null) deleteOimoSkeleton();
 
     bodysquel = {};
     meshsquel = {};
@@ -311,13 +349,14 @@ function createOimoSqueleton() {
     while(i--){
         node = bvh.nodes[i];
         name = node.name;
+        distance = bvh.distances[name];
         if(name!=='Site'){
             /*if(bvh.ParentNodes[name] !== null){
                 var p1 = node.position;//new THREE.Vector3().setFromMatrixPosition( node.matrixWorld )
                 var p2 = bvh.ParentNodes[name].position;//new THREE.Vector3().setFromMatrixPosition( childNodes[name].matrixWorld );
                 distance = DistanceTest(p1, p2);
             }*/
-            if(bvh.ChildNodes[name] !== null){
+            /*if(bvh.ChildNodes[name] !== null){
                 // get distance to child
                 var p1 = new THREE.Vector3().setFromMatrixPosition( node.matrixWorld );
                 var p2 = bvh.ChildNodes[name].position;
@@ -325,7 +364,7 @@ function createOimoSqueleton() {
                 distance = DistanceTest(p1, p2);
             } else {
                 distance = 2;
-            }
+            }*/
             currentNames.push(name);
             currentDistance[i] = distance;
 
@@ -334,7 +373,7 @@ function createOimoSqueleton() {
                 meshsquel[name] = new THREE.Mesh( buffgeoSphere, boneHeadMaterial );
                 meshsquel[name].scale.set( w, w, w  );
             } else {
-                bodysquel[name] = new OIMO.Body({type:'box', name:node.name, size:[w,h,distance], move:true, noSleep:true, world:world, config:config});
+                bodysquel[name] = new OIMO.Body({type:'box', name:node.name, size:[w*2,h*2,distance], move:true, noSleep:true, world:world, config:config});
                 meshsquel[name] = new THREE.Mesh( buffgeoBox, boneMaterial );
                 meshsquel[name].scale.set( w, h, distance  );
             }
@@ -346,7 +385,7 @@ function createOimoSqueleton() {
     isWithSqueleton = true;
 }
 
-function deleteOldSkeleton() {
+function deleteOimoSkeleton() {
     isWithSqueleton = false;
     var i = currentNames.length;
     var name;
@@ -356,6 +395,8 @@ function deleteOldSkeleton() {
         bodysquel[name].remove();
     }
 }
+
+
 
 function updateOimoPhysics() {
 
@@ -416,40 +457,45 @@ function updateOimoPhysics() {
     }
 
    // update dynamique object
+   if(isWithObjects){
+	    var x, y, z;
+	    var i = bodys.length;
+	    var mesh;
+	    var body;
 
-    var x, y, z;
-    var i = bodys.length;
-    var mesh;
-    var body;
+	    while (i--){
+	        body = bodys[i];
+	        mesh = meshs[i];
 
-    while (i--){
-        body = bodys[i];
-        mesh = meshs[i];
+	        if(!body.getSleep()){
 
-        if(!body.getSleep()){
+	            mesh.position.copy(body.getPosition());
+	            mesh.quaternion.copy(body.getQuaternion());
 
-            mesh.position.copy(body.getPosition());
-            mesh.quaternion.copy(body.getQuaternion());
+	            // change material
+	            if(mesh.material.name === 'sbox') mesh.material = matBox;
+	            if(mesh.material.name === 'ssph') mesh.material = matSphere; 
 
-            // change material
-            if(mesh.material.name === 'sbox') mesh.material = matBox;
-            if(mesh.material.name === 'ssph') mesh.material = matSphere; 
-
-            // reset position
-            if(mesh.position.y<-100){
-                x = -100 + Math.random()*200;;
-                z = -100 + Math.random()*200;
-                y = 100 + Math.random()*500;
-                body.resetPosition(x,y,z);
-            }
-        } else {
-            if(mesh.material.name === 'box') mesh.material = matBoxSleep;
-            if(mesh.material.name === 'sph') mesh.material = matSphereSleep;
-        }
-    }
+	            // reset position
+	            if(mesh.position.y<-100){
+	                x = -100 + Math.random()*200;;
+	                z = -100 + Math.random()*200;
+	                y = 100 + Math.random()*500;
+	                body.resetPosition(x,y,z);
+	            }
+	        } else {
+	            if(mesh.material.name === 'box') mesh.material = matBoxSleep;
+	            if(mesh.material.name === 'sph') mesh.material = matSphereSleep;
+	        }
+	    }
+	}
 }
 
+
+
 function populate() {
+
+	isWithObjects = true;
 
     // reset old
     bodys = [];
@@ -480,8 +526,7 @@ function populate() {
         h = 5 + Math.random()*10;
         d = 5 + Math.random()*10;
 
-        if(t===1){
-            
+        if(t===1){       
             bodys[i] = new OIMO.Body({type:'sphere', size:[w*0.5], pos:[x,y,z], move:true, world:world, config:config});
             meshs[i] = new THREE.Mesh( geoSph, matSphere );
             meshs[i].scale.set( w*0.5, w*0.5, w*0.5 );
@@ -491,17 +536,25 @@ function populate() {
             meshs[i] = new THREE.Mesh( geoBox, matBox );
             meshs[i].scale.set( w, h, d );
         }
-
         scene.add( meshs[i] );
     }
 }
 
+function deleteOimoObject() {
+	isWithObjects = false;
+	var i = bodys.length;
+	while (i--){
+		bodys[i].remove();
+		scene.remove( meshs[i] );
+	}
+}
 
 //----------------------------------
 // TODO SEA3D TEST 
 //----------------------------------
 
 var origine ={};
+var skeletonHelper;
 
 function removeHero(){
     isViewModel = false;
@@ -537,10 +590,14 @@ function loadSea3dBody(url){
 		hero.scale.set(size,size,size);
 
         scene.add(hero);
+
+        //skeletonHelper = new THREE.SkeletonHelper( hero );
+        //skeletonHelper.material.linewidth = 3;
+        //scene.add( skeletonHelper );
         //scene.add(g);
         //g.scale.set(size,size,size);
 
-        
+       
        /* hero2 = loader.getMesh(bodyName).clone();
         hero2.material = shaders[0];
         hero2.position.set(100,0,0);
@@ -550,6 +607,7 @@ function loadSea3dBody(url){
         
 
         bones = hero.skeleton.bones;
+        //skeletonHelper.bones = hero.skeleton.bones;
         boneInverses = hero.skeleton.boneInverses;
 
         
@@ -635,12 +693,12 @@ function updateSkinBones() {
         if ( node = nodes[name]){
            
 
-            var originePos = new THREE.Vector3();
+            /*var originePos = new THREE.Vector3();
             var origineQuat = new THREE.Quaternion()
             var origineScale =  new THREE.Vector3();
             if(origine[name]){
                 origine[name].decompose( originePos, origineQuat, origineScale );
-            }
+            }*/
 
 
 			//
@@ -735,6 +793,9 @@ function updateSkinBones() {
             //bone.matrixWorldNeedsUpdate = true;
 		}
     }
+
+    var origineInv = new THREE.Matrix4();
+    var originePos = new THREE.Vector3();
 	
 	if (preservesBoneSize)
 	{
@@ -746,24 +807,30 @@ function updateSkinBones() {
 			if(name!=='Hips'){
     			var parentMtx = bone.parent.mtx ? bone.parent.mtx : bone.parent.matrixWorld;
     			
-    			if (node = nodes[name] )
+    			if (node = nodes[name])
     			{
     				//
     				//	GLOBAL TO LOCAL
     				//								
     				
-    				var inv = new THREE.Matrix4();
-    				inv.getInverse( parentMtx );
+    				//var inv = new THREE.Matrix4();
+    				//inv.getInverse( parentMtx );
+                    origineInv.getInverse( parentMtx );
     				
     				var localMtx = new THREE.Matrix4();				
-    				localMtx.multiplyMatrices( inv, bone.mtx );				
+    				//localMtx.multiplyMatrices( inv, bone.mtx );	
+                    localMtx.multiplyMatrices( origineInv, bone.mtx ); 			
     								
     				//--
     				
-    				var bonePos = new THREE.Vector3();
-    				bonePos.setFromMatrixPosition( bone.matrix );
+    				//var bonePos = new THREE.Vector3();
+    				//bonePos.setFromMatrixPosition( bone.matrix );
+
+                    originePos.setFromMatrixPosition( bone.matrix );
+                    //originePos.setFromMatrixPosition( bone.skinmatrix );
     				
-    				localMtx.setPosition( bonePos );						
+    				//localMtx.setPosition( bonePos );
+                    localMtx.setPosition( originePos );						
     				
     				//--
     				
@@ -782,6 +849,8 @@ function updateSkinBones() {
             }
 		}
 	}
+    //skeletonHelper.bones = bones;//hero.skeleton.bones;
+    //skeletonHelper.update();
 }
 
 //----------------------------------

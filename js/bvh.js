@@ -63,10 +63,13 @@ BVH.Reader.prototype = {
 		}
     },
     parseData:function(data){
+    	//console.log('inparsing')
     	this.data = data;
 		this.channels = [];
 		this.nodes = [];
 		this.Nodes = {};
+		this.distances = {};
+
 		this.ParentNodes = {};
 		this.ChildNodes = {};
 		this.BoneByName = {};
@@ -111,19 +114,30 @@ BVH.Reader.prototype = {
     },
     getNodeList:function () {
     	
-    	var n = this.nodes.length, node, s = "", name;
+    	var n = this.nodes.length, node, s = "", name, p1,p2;
     	for(var i=0; i<n; i++){
     		node = this.nodes[i];
     		name = node.name;
 
     		this.Nodes[name] = node;
-    		if(node.parent){this.ParentNodes[name] = node.parent; }
-		    else this.ParentNodes[name] = null;
-		    if(node.children.length){this.ChildNodes[name] = node.children[0]; }
-		    else this.ChildNodes[name] = null;
+    		if(node.parent){ 
+    			this.ParentNodes[name] = node.parent; 
+    		} else this.ParentNodes[name] = null;
+		    if(node.children.length){
+		    	p1 = new THREE.Vector3().setFromMatrixPosition( node.matrixWorld )
+		    	p2 = node.children[0].position;
+		    	this.distances[name] = BVH.DistanceTest(p1, p2);
+		    	this.ChildNodes[name] = node.children[0]; 
+		    } else{
+		        this.ChildNodes[name] = null; 
+		        this.distances[name] = 2;
+		    }
 
+            
     		s += node.name + " _ "+ i +"<br>"//+" _ "+node.parent.name +" _ "+node.children[0].name+"<br>";
     	}
+
+    	//console.log(this.distances)
     	if(out2)out2.innerHTML = s;
     	if(this.endFunction!== null)this.endFunction();
     },
