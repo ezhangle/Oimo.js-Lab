@@ -147,7 +147,8 @@ BVH.Reader.prototype = {
     	var n = this.nodes.length, node, bone;
     	//var geo = new THREE.CubeGeometry( 0.2, 0.2, 10 );//new THREE.Geometry();
     	//var geo = new THREE.BoxGeometry( this.boneSize, this.boneSize, 1);
-    	var geo = new THREE.BoxGeometry( 1.5, 1.5, 1);
+    	//var geo = new THREE.BoxGeometry( 1.5, 1.5, 1);
+    	var geo = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry( 1.5, 1.5, 1 ) );
     	//geo.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 6 ) );
     	geo.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0.5 ) );
     	//var mat = new THREE.MeshNormalMaterial();
@@ -166,18 +167,17 @@ BVH.Reader.prototype = {
     	    }
     	}
     	scene.add( this.skeleton );
-    	
-
     },
     updateSkeleton:function (  ) {
-    	var mtx, node, bone;
+    	var mtx, node, bone, name;
     	var n = this.nodes.length;
     	var target;
     	for(var i=0; i<n; i++){
     		node = this.nodes[i];
     		bone = this.bones[i];
+    		name = node.name;
 
-    		if ( node.name !== 'Site' ){
+    		if ( name !== 'Site' ){
 	    		mtx = node.matrixWorld;
 	    		bone.position.setFromMatrixPosition( mtx );
 	    		//this.skeletonBones[i].rotation.setFromRotationMatrix( mtx );
@@ -186,8 +186,10 @@ BVH.Reader.prototype = {
 	    			bone.lookAt(target);
 	    			bone.rotation.z = 0;
 
-	    			if(bone.name==="Head")bone.scale.set(this.boneSize*2,this.boneSize*2,BVH.DistanceTest(bone.position, target)*(this.boneSize*1.3));
-	    			else bone.scale.set(this.boneSize,this.boneSize,BVH.DistanceTest(bone.position, target));
+	    			//if(bone.name==="Head")bone.scale.set(this.boneSize*2,this.boneSize*2,BVH.DistanceTest(bone.position, target)*(this.boneSize*1.3));
+	    			//else bone.scale.set(this.boneSize,this.boneSize,BVH.DistanceTest(bone.position, target));
+	    			if(name=="Head")bone.scale.set(this.boneSize*2,this.boneSize*2,this.distances[name]*(this.boneSize*1.3));
+	    			else bone.scale.set(this.boneSize,this.boneSize,this.distances[name]);
 	    		}
 	    		/*if(node.parent){
 	    			target = new THREE.Vector3().setFromMatrixPosition( node.parent.matrixWorld );

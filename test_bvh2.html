@@ -18,7 +18,7 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 #oimoMenu { position:absolute; top:0px; left:0px; }
 #bvhMenu { position:absolute; top:100px; left:0px; }
 #l1 { position:absolute; top:0px; left:0; width:160px; height:100%; background-color:rgba(30,30,40,0.4); pointer-events:none; border-right:1px solid #303040; }
-#l2 { position:absolute; top:0px; right:0; width:160px; height:100%; background-color:rgba(30,30,40,0.4); pointer-events:none; border-left:1px solid #303040;}
+#l2 { position:absolute; top:0px; right:0; width:160px; height:100%; background-color:rgba(30,30,40,0.4); pointer-events:none; border-left:1px solid #303040; }
 #b0 { position:absolute; top:10px; left:5px; width:145px; height:30px; }
 #b1 { position:absolute; top:10px; left:5px; width:72px; height:30px; }
 #b2 { position:absolute; top:10px; left:82px; width:72px; height:30px; }
@@ -38,12 +38,12 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 </head>
 <body>
 <script src="js/bvh.js"></script>
+<script src="js/slider.js"></script>
 <script src="js/three.min.dev.js"></script>
 <script src="js/navigation.js"></script>
 <script src="js/loaders/sea3d/SEA3D.js"></script>
 <script src="js/loaders/sea3d/SEA3DLZMA.js"></script>
 <script src="js/loaders/sea3d/SEA3DLoader.new.js"></script>
-<script src="js/slider.js"></script>
 <script src="js/loth/Transcode.js"></script>
 <script src="build/Oimo.min.js"></script>
 
@@ -79,9 +79,6 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 <script type="text/javascript">
 
 var doc = document;
-
-window.onload = initInterface;
-
 var bodyLink = "models/stickman.sea";
 
 var out1, out2, debug, fileButton, fileSel, holder;
@@ -89,7 +86,6 @@ var out1, out2, debug, fileButton, fileSel, holder;
 var camera, container, scene, renderer, delta, center, centerLight;
 var ToRad = Math.PI / 180;
 var ToDeg = 180 / Math.PI;
-var SeaStandard = false;
 var hero = null;
 var hero2 = null;
 var oimoMenu, bvhMenu, s1, s2;
@@ -120,8 +116,7 @@ var bodys = null;
 var isWithSqueleton = false;
 var isWithObjects = false;
 
-
-
+window.onload = initInterface;
 
 function initInterface() {
 	
@@ -186,8 +181,7 @@ function debugTell(s) {
 }
 
 function init3D() {
-    environment = THREE.ImageUtils.loadTexture( 'images/spherical/env.jpg', THREE.SphericalReflectionMapping);
-
+    
     initEnvironment();
 
 	scene = new THREE.Scene();
@@ -197,9 +191,9 @@ function init3D() {
 	centerLight =  new THREE.Vector3(0,-45,0);
 	moveCamera();
 
-    var buffgeoBack = new THREE.BufferGeometry();
-    buffgeoBack.fromGeometry( new THREE.IcosahedronGeometry(300,1) );
-    var back = new THREE.Mesh( buffgeoBack, new THREE.MeshBasicMaterial( { map:gradTexture([[0.75,0.5,0.45, 0.2], ['#808080','#2e3032','#09050e', '#86a4bc']]), side:THREE.BackSide, depthWrite: false }  ));
+    var backGeo = new THREE.BufferGeometry().fromGeometry( new THREE.IcosahedronGeometry(300,1) );
+    var backMat = new THREE.MeshBasicMaterial( { map:gradTexture([[0.75,0.5,0.45, 0.2], ['#808080','#2e3032','#09050e', '#86a4bc']]), side:THREE.BackSide, depthWrite:false });
+    var back = new THREE.Mesh( backGeo, backMat );
     back.geometry.applyMatrix(new THREE.Matrix4().makeRotationZ(5*ToRad));
     scene.add( back );
     
@@ -211,25 +205,23 @@ function init3D() {
 	//ground.receiveShadow = true;
 	scene.add( ground );
 
-    buffgeoBox = new THREE.BufferGeometry();
-    buffgeoBox.fromGeometry( new THREE.BoxGeometry( 1, 1, 1 ) );
+    buffgeoBox = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry( 1, 1, 1 ) );
     
     var helper = new THREE.GridHelper( 100, 50 );
 	helper.setColors( 0x909090, 0x606060 );
 	scene.add( helper );
     helper.position.y = 5;
 
-    renderer = new THREE.WebGLRenderer({precision: "mediump", antialias:true});
+    renderer = new THREE.WebGLRenderer({ precision: "mediump", antialias:true });
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.autoClear = false;
-   // renderer.shadowMapEnabled = true;
+    //renderer.shadowMapEnabled = true;
     //renderer.gammaInput = true;
     //renderer.gammaOutput = true;
 
     container.appendChild( renderer.domElement );
 
     initEvents();
-    //initOimoPhysics();
 	initBVH();
 	
 	heroVisibility();
@@ -238,8 +230,6 @@ function init3D() {
 function animate() {
     requestAnimationFrame( animate );
     updateBVH();
-    
-
     //renderer.clear();
     renderer.render( scene, camera );
 }
@@ -308,7 +298,7 @@ function initOimoPhysics(){
     world.gravity = new OIMO.Vec3(0, -1, 0);
 
     createOimoSqueleton();
-    populate();
+    createOimoObject();
 
     oimoStep = setInterval(updateOimoPhysics, 1000/60);
 }
@@ -322,15 +312,6 @@ function removePhysics(){
 	
 }
 
-/*function DistanceTest( p1, p2 ){
-    var x = p2.x-p1.x;
-    var y = p2.y-p1.y;
-    var z = p2.z-p1.z;
-    var d = Math.sqrt(x*x + y*y + z*z);
-    if(d<=0)d=0.1;
-    return d;
-}*/
-
 function createOimoSqueleton() {
     if(currentNames!==null) deleteOimoSkeleton();
 
@@ -340,7 +321,6 @@ function createOimoSqueleton() {
     currentDistance = [];
 
     var node, name;
-
     var w=6, h = 6;
     var distance = 2;
     var boneMaterial = new THREE.MeshBasicMaterial( { color: 0xFFFF33, transparent:true, opacity:0.1, depthTest: false, depthWrite: true } );
@@ -398,8 +378,6 @@ function deleteOimoSkeleton() {
         bodysquel[name].remove();
     }
 }
-
-
 
 function updateOimoPhysics() {
 
@@ -494,9 +472,7 @@ function updateOimoPhysics() {
 	}
 }
 
-
-
-function populate() {
+function createOimoObject() {
 
 	isWithObjects = true;
 
@@ -913,8 +889,8 @@ function basicTexture(n){
 //----------------------------------
 
 function initEnvironment(){
-
-    envLists = ['env.jpg','env1.jpg','env2.jpg','env3.jpg','env4.jpg','env5.jpg','env6.jpg','env7.jpg','env8.jpg','env9.jpg'];
+	environment = THREE.ImageUtils.loadTexture( 'images/spherical/env.jpg', THREE.SphericalReflectionMapping );
+    envLists = ['env.jpg','env1.jpg','env2.jpg','env3.jpg','env4.jpg','env5.jpg','env6.jpg','env7.jpg','env8.jpg','env9.jpg','env10.jpg'];
     var env = document.getElementById('envSelector');
     var canvas = document.createElement( 'canvas' );
     canvas.width = canvas.height = 64;
@@ -922,13 +898,9 @@ function initEnvironment(){
     envcontext = canvas.getContext('2d');
     loadNewEnv(true);
     env.onclick = loadNewEnv;
-
 } 
 
 function loadNewEnv(){
-   // var url = 'images/spherical/'+envLists[nEnv];
-   // env22 = THREE.ImageUtils.loadTexture( url, new THREE.SphericalReflectionMapping() );
-
     var img = new Image();
     img.onload = function(){
         nEnv++;
@@ -937,14 +909,11 @@ function loadNewEnv(){
         environment.image = img;
         environment.needsUpdate = true;
 
-        
-
         // update each material
         var i = shaders.length;
         while(i--)shaders[i].uniforms.env.value = environment;
     }
     img.src = 'images/spherical/'+envLists[nEnv];
-
 }
 
 </script>
