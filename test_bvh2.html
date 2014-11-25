@@ -82,18 +82,15 @@ var doc = document;
 var bodyLink = "models/stickman.sea";
 
 var out1, out2, debug, fileButton, fileSel, holder;
-
+var environment, envcontext, envLists, nEnv = 0;
 var camera, container, scene, renderer, delta, center, centerLight;
 var ToRad = Math.PI / 180;
 var ToDeg = 180 / Math.PI;
 var hero = null;
 var hero2 = null;
 var oimoMenu, bvhMenu, s1, s2;
-var buffgeoBox;
-var shaders = [];
-var environment, envcontext, envLists, nEnv = 0;
-var geoSph;
-var geoBox;
+var buffgeoBox, buffgeoSphere;
+
 var bvh;
 var BVHset = {ax:"x", ay:"y", az:"z", dx:1, dy:1, dz:1, rx:0, ry:0, rz:0, order:"XYZ"};
 var BVHanimConfig = { debug:true, speed:0.5, size:1, px:0, py:0, pz:0, boneSize:0.5 };
@@ -105,14 +102,14 @@ var currentNames = null;
 var currentDistance = null;
 
 //oimo var
-var isWithPhysics = false;
-var oimoStep = null;
 var world = null;
+var oimoStep = null;
 var collisionGroupes = {};
 var bodysquel = null;
 var meshsquel = null;
 var meshs = null;
 var bodys = null;
+var isWithPhysics = false;
 var isWithSqueleton = false;
 var isWithObjects = false;
 
@@ -206,6 +203,7 @@ function init3D() {
 	scene.add( ground );
 
     buffgeoBox = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry( 1, 1, 1 ) );
+    buffgeoSphere = new THREE.BufferGeometry().fromGeometry( new THREE.SphereGeometry( 1, 20, 10 ) );
     
     var helper = new THREE.GridHelper( 100, 50 );
 	helper.setColors( 0x909090, 0x606060 );
@@ -281,13 +279,6 @@ function initOimoPhysics(){
         group3 : 1 << 2,  // 00000000 00000000 00000000 00000100
         all : 0xffffffff  // 11111111 11111111 11111111 11111111
     }
-    buffgeoSphere = new THREE.BufferGeometry().fromGeometry( new THREE.SphereGeometry( 1, 20, 10 ) );
-    geoSph= new THREE.SphereGeometry( 1, 20, 20 );
-
-    buffgeoBox = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry( 1, 1, 1 ) );
-    geoBox = new THREE.BoxGeometry( 1, 1, 1 )
-
-    
 
     matSphere = new THREE.MeshBasicMaterial( { envMap:environment, map: basicTexture(0), name:'sph' } );
     matBox = new THREE.MeshBasicMaterial( { envMap:environment, map:basicTexture(2), name:'box' } );
@@ -507,12 +498,12 @@ function createOimoObject() {
 
         if(t===1){       
             bodys[i] = new OIMO.Body({type:'sphere', size:[w*0.5], pos:[x,y,z], move:true, world:world, config:config});
-            meshs[i] = new THREE.Mesh( geoSph, matSphere );
+            meshs[i] = new THREE.Mesh( buffgeoSphere, matSphere );
             meshs[i].scale.set( w*0.5, w*0.5, w*0.5 );
         } else if(t===2){
            
             bodys[i] = new OIMO.Body({type:'box', size:[w,h,d], pos:[x,y,z], move:true, world:world, config:config});
-            meshs[i] = new THREE.Mesh( geoBox, matBox );
+            meshs[i] = new THREE.Mesh( buffgeoBox, matBox );
             meshs[i].scale.set( w, h, d );
         }
         scene.add( meshs[i] );
@@ -538,10 +529,12 @@ var skeletonHelper;
 function removeHero(){
     isViewModel = false;
     scene.remove(hero);
+    hero.material.dispose();
+    hero.geometry.dispose();
 }
 
 function loadSea3dBody(url){
-    if(isViewModel)removeHero();
+    if(isViewModel) removeHero();
     var bodyName;
     var size = 1;
     var loader = new THREE.SEA3D( false );
@@ -641,9 +634,7 @@ THREE.Skeleton.prototype.update = ( function () {
 		}
 
 		if ( this.useVertexTexture ) {
-
 			this.boneTexture.needsUpdate = true;
-
 		}
 		
 	};
@@ -908,10 +899,6 @@ function loadNewEnv(){
         envcontext.drawImage(img, 0, 0, 64,64);
         environment.image = img;
         environment.needsUpdate = true;
-
-        // update each material
-        var i = shaders.length;
-        while(i--)shaders[i].uniforms.env.value = environment;
     }
     img.src = 'images/spherical/'+envLists[nEnv];
 }
