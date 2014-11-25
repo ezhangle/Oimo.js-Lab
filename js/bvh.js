@@ -132,7 +132,6 @@ BVH.Reader.prototype = {
 		        this.ChildNodes[name] = null; 
 		        this.distances[name] = 2;
 		    }
-
             
     		s += node.name + " _ "+ i +"<br>"//+" _ "+node.parent.name +" _ "+node.children[0].name+"<br>";
     	}
@@ -198,10 +197,10 @@ BVH.Reader.prototype = {
     	}
     },
 	transposeName:function(name){
-		if(name==="hip") name = "Hips";
-		if(name==="abdomen") name = "Spine1";
-		if(name==="chest") name = "Chest";
-		if(name==="neck") name = "Neck";
+		if(name==="hip" || name==="SpineBase") name = "Hips";
+		if(name==="abdomen" || name==="SpineBase2") name = "Spine1";
+		if(name==="chest" || name==="SpineMid") name = "Chest";
+		if(name==="neck" || name==="Neck2") name = "Neck";
 		if(name==="head") name = "Head";
 		if(name==="lCollar") name = "LeftCollar";
 		if(name==="rCollar") name = "RightCollar";
@@ -219,22 +218,22 @@ BVH.Reader.prototype = {
 		if(name==="rShin") name = "RightLowLeg";
 
 		// leg
-		if(name==="RightHip") name = "RightUpLeg";
-		if(name==="LeftHip") name = "LeftUpLeg";
-		if(name==="RightKnee") name = "RightLowLeg";
-		if(name==="LeftKnee") name = "LeftLowLeg";
-		if(name==="RightAnkle") name = "RightFoot";
-		if(name==="LeftAnkle") name = "LeftFoot";
+		if(name==="RightHip" || name==="HipRight") name = "RightUpLeg";
+		if(name==="LeftHip" || name==="HipLeft") name = "LeftUpLeg";
+		if(name==="RightKnee" || name==="KneeRight") name = "RightLowLeg";
+		if(name==="LeftKnee" || name==="KneeLeft") name = "LeftLowLeg";
+		if(name==="RightAnkle" || name==="AnkleRight") name = "RightFoot";
+		if(name==="LeftAnkle" || name==="AnkleLeft") name = "LeftFoot";
 		// arm
-		if(name==="RightShoulder") name = "RightUpArm";
-		if(name==="LeftShoulder") name = "LeftUpArm";
-		if(name==="RightElbow") name = "RightLowArm";
-		if(name==="LeftElbow") name = "LeftLowArm";
-		if(name==="RightWrist") name = "RightHand";
-		if(name==="LeftWrist") name = "LeftHand";
+		if(name==="RightShoulder" || name==="ShoulderRight") name = "RightUpArm";
+		if(name==="LeftShoulder" || name==="ShoulderLeft") name = "LeftUpArm";
+		if(name==="RightElbow" || name==="ElbowRight") name = "RightLowArm";
+		if(name==="LeftElbow" || name==="ElBowLeft") name = "LeftLowArm";
+		if(name==="RightWrist" || name==="WristRight") name = "RightHand";
+		if(name==="LeftWrist"|| name==="WristLeft") name = "LeftHand";
 
-		if(name==="rcollar") name = "RightCollar";
-		if(name==="lcollar") name = "LeftCollar";
+		if(name==="rcollar" || name==="CollarRight") name = "RightCollar";
+		if(name==="lcollar" || name==="CollarLeft") name = "LeftCollar";
 
 		if(name==="rtoes") name = "RightToe";
 		if(name==="ltoes") name = "LeftToe";
