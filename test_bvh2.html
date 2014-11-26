@@ -20,6 +20,7 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 #l1 { position:absolute; top:0px; left:0; width:160px; height:100%; background-color:rgba(30,30,40,0.4); pointer-events:none; border-right:1px solid #303040; }
 #l2 { position:absolute; top:0px; right:0; width:160px; height:100%; background-color:rgba(30,30,40,0.4); pointer-events:none; border-left:1px solid #303040; }
 #b0 { position:absolute; top:10px; left:5px; width:145px; height:30px; }
+#b00 { position:absolute; top:50px; left:5px; width:145px; height:30px; }
 #b1 { position:absolute; top:10px; left:5px; width:72px; height:30px; }
 #b2 { position:absolute; top:10px; left:82px; width:72px; height:30px; }
 #b3 { position:absolute; top:10px; right:5px; width:148px; height:30px; }
@@ -55,6 +56,7 @@ body { background: #000; font:12px sans-serif; color:#fff; text-shadow:1px 1px 0
 
 <div id="oimoMenu">
     <input type="submit" value="Physics on" id="b0">
+    <input type="submit" value="BVH debug off" id="b00">
 </div>
 
 <div id="bvhMenu">
@@ -113,6 +115,8 @@ var isWithPhysics = false;
 var isWithSqueleton = false;
 var isWithObjects = false;
 
+var isWithBVHSqueleton = true;
+
 window.onload = initInterface;
 
 function initInterface() {
@@ -144,6 +148,7 @@ function initInterface() {
     fileButton.onmouseout = function () { fileSel.className = ''; return false; };
 
     doc.getElementById("b0").addEventListener( 'click', function ( e ) { physicsOnOff(); }, false );
+    doc.getElementById("b00").addEventListener( 'click', function ( e ) { bvhOnOff(); }, false );
 
     doc.getElementById("b1").addEventListener( 'click', function ( e ) { loadBVH("bvh/action.png"); }, false );
     doc.getElementById("b2").addEventListener( 'click', function ( e ) { loadBVH("bvh/story.png"); }, false );   
@@ -159,6 +164,11 @@ function initInterface() {
 	
 	init3D();
     animate();
+}
+
+function bvhOnOff(evt) {
+	if(isWithBVHSqueleton){ bvh.showHideSkeleton(false); isWithBVHSqueleton=false; doc.getElementById("b00").value = "BVH debug on";}
+	else { bvh.showHideSkeleton(true); isWithBVHSqueleton=true; doc.getElementById("b00").value = "BVH debug off";}
 }
 
 function physicsOnOff(evt) {
@@ -238,6 +248,7 @@ function animate() {
 
 function initBVH() {
     bvh = new BVH.Reader();
+    //bvh.reScale(0.5);
     loadBVH("bvh/tpose.bvh");
     //loadBVH("bvh/story.png");
 }

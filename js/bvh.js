@@ -37,13 +37,20 @@ BVH.Reader = function(){
 
 	this.skeleton = null;
 	this.bones = [];
+	this.nodesMesh = [];
 	this.boneSize = 1.5;
 
 	this.endFunction = null;
 
-	//this.material = new THREE.MeshNormalMaterial();//
-    this.material = new THREE.MeshPhongMaterial({ color:0xffffbb, emissive:0x606000 });
-    this.nodeMaterial = new THREE.MeshPhongMaterial({ color:0x88ff88, emissive:0x606000 });
+	// geometry
+	this.boxgeo = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry( 1.5, 1.5, 1 ) );
+    this.boxgeo.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0.5 ) );
+
+    this.nodegeo = new THREE.BufferGeometry().fromGeometry( new THREE.SphereGeometry ( 1, 8, 6 ) );
+
+	// material
+    this.boneMaterial = new THREE.MeshBasicMaterial({ color:0xffff44 });
+    this.nodeMaterial = new THREE.MeshBasicMaterial({ color:0x88ff88 });
 }
 
 BVH.Reader.prototype = {
@@ -83,9 +90,6 @@ BVH.Reader.prototype = {
 				this.root.position.copy(this.position);
 				this.root.scale.set(this.scale,this.scale,this.scale);
 
-				if(this.debug){
-					this.addSkeleton( this.nodes.length );
-				}
 				break;
 			case 'MOTION':
 				this.data.shift();
@@ -98,22 +102,34 @@ BVH.Reader.prototype = {
 		}
 
 		debugTell("BVH frame:"+this.numFrames+" s/f:"+this.secsPerFrame + " channels:"+this.channels.length + " node:"+ this.nodes.length);
+		this.getDistanceList();
 		this.getNodeList();
+
+		if(this.debug) this.addSkeleton();
+
 		this.startTime = Date.now();
 		this.play = true;
-
-		
     },
     reScale:function (s) {
     	this.scale = s;
-    	this.root.scale.set(this.scale,this.scale,this.scale);
+    	if(this.root)this.root.scale.set(this.scale,this.scale,this.scale);
     },
     rePosition:function (v) {
     	this.position = v;
     	this.root.position.copy(this.position);
     },
+    getDistanceList:function () {
+    	this.distances = {};
+    	var n = this.nodes.length, node, name;
+    	while (n--){
+    		node = this.nodes[n];
+    		name = node.name;
+    		if(node.children.length){
+    			this.distances[name] = BVH.DistanceTest(new THREE.Vector3().setFromMatrixPosition( node.matrixWorld ), node.children[0].position);
+    		} else this.distances[name] = 2;
+    	}
+    },
     getNodeList:function () {
-    	
     	var n = this.nodes.length, node, s = "", name, p1,p2;
     	for(var i=0; i<n; i++){
     		node = this.nodes[i];
@@ -124,13 +140,13 @@ BVH.Reader.prototype = {
     			this.ParentNodes[name] = node.parent; 
     		} else this.ParentNodes[name] = null;
 		    if(node.children.length){
-		    	p1 = new THREE.Vector3().setFromMatrixPosition( node.matrixWorld )
-		    	p2 = node.children[0].position;
-		    	this.distances[name] = BVH.DistanceTest(p1, p2);
+		    	//p1 = new THREE.Vector3().setFromMatrixPosition( node.matrixWorld )
+		    	//p2 = node.children[0].position;
+		    	//this.distances[name] = BVH.DistanceTest(p1, p2);
 		    	this.ChildNodes[name] = node.children[0]; 
 		    } else{
 		        this.ChildNodes[name] = null; 
-		        this.distances[name] = 2;
+		        //this.distances[name] = 2;
 		    }
             
     		s += node.name + " _ "+ i +"<br>"//+" _ "+node.parent.name +" _ "+node.children[0].name+"<br>";
@@ -140,23 +156,24 @@ BVH.Reader.prototype = {
     	if(out2)out2.innerHTML = s;
     	if(this.endFunction!== null)this.endFunction();
     },
+    showHideSkeleton:function (b) {
+    	if(b) this.skeleton.visible = true;
+    	else this.skeleton.visible = false;
+    },
     addSkeleton:function ( n ) {
-    	this.skeleton = new THREE.Object3D();
+    	this.skeleton = new THREE.Group();
     	this.bones = [];
 
     	var n = this.nodes.length, node, bone;
-    	//var geo = new THREE.CubeGeometry( 0.2, 0.2, 10 );//new THREE.Geometry();
-    	//var geo = new THREE.BoxGeometry( this.boneSize, this.boneSize, 1);
-    	//var geo = new THREE.BoxGeometry( 1.5, 1.5, 1);
-    	var geo = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry( 1.5, 1.5, 1 ) );
-    	//geo.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 6 ) );
-    	geo.applyMatrix( new THREE.Matrix4().makeTranslation( 0, 0, 0.5 ) );
-    	//var mat = new THREE.MeshNormalMaterial();
 
     	for(var i=0; i<n; i++){
     		node = this.nodes[i];
+
+    		this.nodesMesh[i] = new THREE.Mesh( this.nodegeo, this.nodeMaterial  )
+    		this.skeleton.add(this.nodesMesh[i]);
+
     		if ( node.name !== 'Site' ){
-    			bone = new THREE.Mesh(geo, this.material);
+    			bone = new THREE.Mesh( this.boxgeo, this.boneMaterial);
     			bone.castShadow = true;
                 bone.receiveShadow = true;
     			bone.rotation.order = 'XYZ';
@@ -177,8 +194,12 @@ BVH.Reader.prototype = {
     		bone = this.bones[i];
     		name = node.name;
 
+    		mtx = node.matrixWorld;
+
+    		this.nodesMesh[i].position.setFromMatrixPosition( mtx );
+
     		if ( name !== 'Site' ){
-	    		mtx = node.matrixWorld;
+	    		
 	    		bone.position.setFromMatrixPosition( mtx );
 	    		//this.skeletonBones[i].rotation.setFromRotationMatrix( mtx );
 	    		if(node.children.length){
@@ -248,10 +269,10 @@ BVH.Reader.prototype = {
     	var name, done, n, node, t;
 		name = data.shift();
 		name = this.transposeName(name);
-		node = new THREE.Object3D();
+		node = new THREE.Group();
 
 
-		//node = new THREE.Mesh( new THREE.BoxGeometry(1,1,1),  this.nodeMaterial  )
+		//node = new THREE.Mesh( this.nodegeo, this.nodeMaterial  )
 		//node.add(b);
 		node.name = name;
 
@@ -278,16 +299,18 @@ BVH.Reader.prototype = {
 		}
 		//
 		this.nodes.push(node);
+		//console.log(name);
 
 		//this.Nodes[node.name] = node;
 		   // if(node.parent){this.ParentNodes[node.name] = node.parent.name; console.log('pp')}
 		   // else this.ParentNodes[node.name] = null;
 
-		  //  scene.add( node );
+		//if(name == 'Hips') scene.add( node );
 
 		return node;
     },
     clearNode:function(){
+    	//console.log('clear');
     	var i;
     	if(out2)out2.innerHTML = "";
 
