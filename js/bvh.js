@@ -85,6 +85,7 @@ BVH.Reader.prototype = {
 			switch (this.data.shift()) {
 			case 'ROOT':
 			    if(this.root !== null) this.clearNode();
+			    if(this.skeleton !== null) this.clearSkeleton();
 
 				this.root = this.parseNode(this.data);
 				this.root.position.copy(this.position);
@@ -160,9 +161,10 @@ BVH.Reader.prototype = {
     	if(b) this.skeleton.visible = true;
     	else this.skeleton.visible = false;
     },
-    addSkeleton:function ( n ) {
+    addSkeleton:function () {
     	this.skeleton = new THREE.Group();
     	this.bones = [];
+    	this.nodesMesh = [];
 
     	var n = this.nodes.length, node, bone;
 
@@ -184,6 +186,14 @@ BVH.Reader.prototype = {
     	    }
     	}
     	scene.add( this.skeleton );
+    },
+    clearSkeleton:function () {
+    	var n = this.skeleton.children.length;
+    	while(n--){
+    		this.skeleton.remove(this.skeleton.children[n]);
+    	}
+    	scene.remove( this.skeleton );
+    	this.skeleton = null;
     },
     updateSkeleton:function (  ) {
     	var mtx, node, bone, name;
@@ -321,7 +331,7 @@ BVH.Reader.prototype = {
 			}
 			this.nodes.length = 0;
 
-			if(this.bones.length > 0){
+			/*if(this.bones.length > 0){
 		    	for ( i=0; i<this.bones.length; i++){
 					if(this.bones[i]){
 						this.bones[i].geometry.dispose();
@@ -329,7 +339,7 @@ BVH.Reader.prototype = {
 				}
 				this.bones.length = 0;
 		        scene.remove( this.skeleton );
-		   }
+		   }*/
 		}
     },
     animate:function(){
